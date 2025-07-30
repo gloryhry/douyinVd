@@ -1,5 +1,4 @@
 import { getVideoUrl, getVideoInfo } from "./douyin.ts";
-import { serveDir } from "https://deno.land/std@0.224.0/http/file_server.ts";
 
 const handler = async (req: Request) => {
     const url = new URL(req.url);
@@ -69,12 +68,11 @@ const handler = async (req: Request) => {
         }
     }
     
-    // Static file serving
-    return serveDir(req, {
-        fsRoot: "public",
-        urlRoot: "",
-        showDirListing: false, // Do not show directory listing
-        enableCors: true,
+    // Static file serving is handled by Vercel.
+    // If no API route is matched, return a 404.
+    return new Response("API endpoint not found.", {
+        status: 404,
+        headers: { "Content-Type": "text/plain" },
     });
 };
 
