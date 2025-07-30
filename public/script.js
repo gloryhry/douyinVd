@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 仅保留中文字符、字母、数字、以及 . _ -
         const sanitized = filename.replace(/[^\p{L}\p{N}\u4e00-\u9fa5._-]/gu, '');
         // 截断为 200 个字符
-        return sanitized.substring(0, 200);
+        return sanitized.substring(0, 20);
     }
 
     function renderResult(data) {

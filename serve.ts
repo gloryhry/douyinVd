@@ -1,4 +1,5 @@
 import { getVideoUrl, getVideoInfo } from "./douyin.ts";
+import { serveDir } from "https://deno.land/std@0.224.0/http/file_server.ts";
 
 // **关键第一步**: 强制 Vercel 使用 Edge Runtime
 export const config = {
@@ -68,7 +69,7 @@ const handler = async (req: Request) => {
             console.error('下载代理出错:', error);
             return new Response(`服务器内部错误: ${error.message}`, { status: 500 });
         }
-    } 
+    }
     // --- 您的其他 API 路由逻辑保持不变 ---
     else if (pathname.startsWith("/api/")) {
         if (url.searchParams.has("url")) {
@@ -87,9 +88,12 @@ const handler = async (req: Request) => {
         }
     }
     
-    return new Response("API endpoint not found.", {
-        status: 404,
-        headers: { "Content-Type": "text/plain" },
+    // Static file serving
+    return serveDir(req, {
+        fsRoot: "public",
+        urlRoot: "",
+        showDirListing: false, // Do not show directory listing
+        enableCors: true,
     });
 };
 
