@@ -47,6 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+        function sanitizeFilename(filename) {
+        if (!filename) return '';
+        // 仅保留中文字符、字母、数字、以及 . _ -
+        const sanitized = filename.replace(/[^\p{L}\p{N}\u4e00-\u9fa5._-]/gu, '');
+        // 截断为 200 个字符
+        return sanitized.substring(0, 200);
+    }
+
     function renderResult(data) {
         if (!data) {
             showAlert('未能获取到有效数据。', 'danger');
@@ -55,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let mediaHtml = '';
         if (data.type === 'video' && data.video_url) {
-            const title = data.desc || "douyin_video";
+            const title = sanitizeFilename(data.desc || "douyin_video");
             const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
             const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
             mediaHtml = `
@@ -65,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         } else if (data.type === 'img' && data.image_url_list && data.image_url_list.length > 0) {
-            const title = data.desc || "douyin_image";
+            const title = sanitizeFilename(data.desc || "douyin_image");
             mediaHtml = `
                 <div class="media-container">
                     <h3>图集预览</h3>
