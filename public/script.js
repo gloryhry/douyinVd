@@ -47,6 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+        function sanitizeFilename(filename) {
+        if (!filename) return '';
+        // 仅保留中文字符、字母、数字、以及 . _ -
+        const sanitized = filename.replace(/[^\p{L}\p{N}\u4e00-\u9fa5._-]/gu, '');
+        // 截断为 200 个字符
+        return sanitized.substring(0, 20);
+    }
+
     function renderResult(data) {
         if (!data) {
             showAlert('未能获取到有效数据。', 'danger');
@@ -55,17 +63,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let mediaHtml = '';
         if (data.type === 'video' && data.video_url) {
-            const title = data.desc || "douyin_video";
+            const title = sanitizeFilename(data.desc || "douyin_video");
             const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
             const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
-            mediaHtml = `
+            const videoUrl = data.video_url;
+            const urlContainerHtml = `
+                <div class="media-container">
+                    <h3>视频链接<span id="copy-status"></span></h3>
+                    <div class="url-display">
+                        <input type="text" id="video-url-text" value="${videoUrl}" readonly class="url-input">
+                        <button id="copy-url-btn" class="copy-button">复制</button>
+                    </div>
+                </div>
+            `;
+            mediaHtml = urlContainerHtml + `
                 <div class="media-container">
                     <video controls src="${videoProxyUrl}" preload="metadata"></video>
                     <a href="${downloadUrl}" class="download-link" download="${title}.mp4">下载视频</a>
                 </div>
             `;
         } else if (data.type === 'img' && data.image_url_list && data.image_url_list.length > 0) {
-            const title = data.desc || "douyin_image";
+            const title = sanitizeFilename(data.desc || "douyin_image");
             mediaHtml = `
                 <div class="media-container">
                     <h3>图集预览</h3>
@@ -97,6 +115,43 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         resultArea.innerHTML = infoHtml + mediaHtml;
+
+        if (data.type === 'video' && data.video_url) {
+            const copyBtn = document.getElementById('copy-url-btn');
+            const videoUrl = data.video_url;
+
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => copyToClipboard(videoUrl, false));
+            }
+            copyToClipboard(videoUrl, true);
+        }
+    }
+
+    function copyToClipboard(text, isAuto = false) {
+        const copyStatus = document.getElementById('copy-status');
+        const copyBtn = document.getElementById('copy-url-btn');
+
+        navigator.clipboard.writeText(text).then(() => {
+            if (copyStatus) {
+                copyStatus.textContent = isAuto ? ' (已自动复制)' : ' (已复制)';
+                copyStatus.style.color = 'green';
+            }
+            if (copyBtn) {
+                copyBtn.textContent = '已复制!';
+                setTimeout(() => {
+                    copyBtn.textContent = '复制';
+                }, 2000);
+            }
+        }).catch(err => {
+            console.error('无法复制: ', err);
+            if (copyStatus) {
+                copyStatus.textContent = ' (自动复制失败)';
+                copyStatus.style.color = 'red';
+            }
+            if (!isAuto) {
+                showAlert('复制链接失败，您的浏览器可能不支持或未授权。', 'warning');
+            }
+        });
     }
 
     function showAlert(message, type = 'danger') {
