@@ -66,7 +66,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = sanitizeFilename(data.desc || "douyin_video");
             const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
             const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
-            mediaHtml = `
+            const videoUrl = data.video_url;
+            const urlContainerHtml = `
+                <div class="media-container">
+                    <h3>视频链接<span id="copy-status"></span></h3>
+                    <div class="url-display">
+                        <input type="text" id="video-url-text" value="${videoUrl}" readonly class="url-input">
+                        <button id="copy-url-btn" class="copy-button">复制</button>
+                    </div>
+                </div>
+            `;
+            mediaHtml = urlContainerHtml + `
                 <div class="media-container">
                     <video controls src="${videoProxyUrl}" preload="metadata"></video>
                     <a href="${downloadUrl}" class="download-link" download="${title}.mp4">下载视频</a>
@@ -105,6 +115,43 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         resultArea.innerHTML = infoHtml + mediaHtml;
+
+        if (data.type === 'video' && data.video_url) {
+            const copyBtn = document.getElementById('copy-url-btn');
+            const videoUrl = data.video_url;
+
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => copyToClipboard(videoUrl, false));
+            }
+            copyToClipboard(videoUrl, true);
+        }
+    }
+
+    function copyToClipboard(text, isAuto = false) {
+        const copyStatus = document.getElementById('copy-status');
+        const copyBtn = document.getElementById('copy-url-btn');
+
+        navigator.clipboard.writeText(text).then(() => {
+            if (copyStatus) {
+                copyStatus.textContent = isAuto ? ' (已自动复制)' : ' (已复制)';
+                copyStatus.style.color = 'green';
+            }
+            if (copyBtn) {
+                copyBtn.textContent = '已复制!';
+                setTimeout(() => {
+                    copyBtn.textContent = '复制';
+                }, 2000);
+            }
+        }).catch(err => {
+            console.error('无法复制: ', err);
+            if (copyStatus) {
+                copyStatus.textContent = ' (自动复制失败)';
+                copyStatus.style.color = 'red';
+            }
+            if (!isAuto) {
+                showAlert('复制链接失败，您的浏览器可能不支持或未授权。', 'warning');
+            }
+        });
     }
 
     function showAlert(message, type = 'danger') {
