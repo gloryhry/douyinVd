@@ -43,8 +43,29 @@ const handler = async (req: Request) => {
                 headers.set("Content-Disposition", `attachment; filename="${sanitizedFilename}.${ext}"; filename*=UTF-8''${encodedFilename}.${ext}`);
             }
 
-            return new Response(response.body, {
+            const stream = new ReadableStream({
+                async start(controller) {
+                    const reader = response.body!.getReader();
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) {
+                                break;
+                            }
+                            controller.enqueue(value);
+                        }
+                    } catch (error) {
+                        console.error("Stream pump error:", error);
+                        controller.error(error);
+                    } finally {
+                        controller.close();
+                    }
+                },
+            });
+
+            return new Response(stream, {
                 headers: headers,
+                status: response.status,
             });
         } catch (error) {
             console.error('下载代理出错:', error);
