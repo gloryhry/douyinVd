@@ -82,7 +82,7 @@ async function parseImgList(body: string):Promise<string[]> {
   }
   const urlSet = new Set(urlList)
   // console.log('urlSet.size:',urlSet.size)
-  const rList = []
+  const rList: string[] = []
 
   for (let urlSetKey of urlSet) {
     // console.log('urlSetKey:',urlSetKey)
@@ -168,7 +168,23 @@ async function getVideoInfo(url: string): Promise<DouyinVideoInfo> {
     console.log(douyinVideoInfo);
     return douyinVideoInfo;
   } else {
-    throw new Error("No stats found in the response.");
+    // If stats are not found, return a partial object with an error message
+    // instead of throwing an error, to prevent a 500 server error.
+    const partialInfo: DouyinVideoInfo = {
+      aweme_id: null,
+      comment_count: null,
+      digg_count: null,
+      share_count: null,
+      collect_count: null,
+      nickname: auMatch ? auMatch[1] : null,
+      signature: auMatch ? auMatch[2] : null,
+      desc: descMatch ? descMatch[1] : "无法从此链接获取完整的统计信息。",
+      create_time: ctMatch ? formatDate(new Date(parseInt(ctMatch[1]) * 1000)) : null,
+      video_url: video_url,
+      type: type,
+      image_url_list: img_list,
+    };
+    return partialInfo;
   }
 }
 

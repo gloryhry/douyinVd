@@ -1,0 +1,13 @@
+services:
+  my-deno-app:
+    build:
+      context: .
+      args:
+        https_proxy: http://192.168.3.30:7890
+        http_proxy: http://192.168.3.30:7890
+        all_proxy: http://192.168.3.30:7890
+      network: host
+    image: my-deno-app
+    command: deno run --allow-net --allow-read main.ts
+    ports:
+      - "8000:8000"
