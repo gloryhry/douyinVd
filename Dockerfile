@@ -1,10 +1,8 @@
 # Stage 1: Build and cache dependencies
-FROM denoland/deno:1.37.2 AS builder
+FROM denoland/deno:1.44.4 AS builder
 
-# Set proxy for the build stage
-ENV https_proxy=http://127.0.0.1:7890
-ENV http_proxy=http://127.0.0.1:7890
-ENV all_proxy=http://127.0.0.1:7890
+# Proxy settings are now passed during 'docker run' or 'docker build'
+# See updated instructions.
 
 WORKDIR /app
 
@@ -17,13 +15,13 @@ COPY api/ /app/api/
 RUN deno cache --lock=deno.lock --lock-write main.ts
 
 # Stage 2: Create the final, lean image
-FROM denoland/deno:1.37.2
+FROM denoland/deno:1.44.4
 
 WORKDIR /app
 
 # Copy lock file and cached dependencies from the builder stage
 COPY --from=builder /app/deno.lock .
-COPY --from=builder /root/.cache/deno /root/.cache/deno
+COPY --from=builder /deno-dir /deno-dir
 
 # Copy application code
 COPY public/ /app/public/

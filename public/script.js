@@ -2,15 +2,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlInput = document.getElementById('douyin-url');
     const parseBtn = document.getElementById('parse-btn');
     const resultArea = document.getElementById('result-area');
+    const loader = document.querySelector('.loader-container');
 
-    parseBtn.addEventListener('click', async () => {
-        const url = urlInput.value.trim();
+    function extractFirstUrl(text) {
+        if (!text) return null;
+        const urlRegex = /(https?:\/\/[^\s"'<>`]+)/;
+        const match = text.match(urlRegex);
+        return match ? match[0] : null;
+    }
+
+    const handleParse = async () => {
+        const inputText = urlInput.value.trim();
+        const url = extractFirstUrl(inputText);
+
         if (!url) {
-            alert('请输入抖音链接！');
+            showAlert('未在输入内容中找到有效链接！', 'danger');
             return;
         }
 
-        resultArea.innerHTML = '<p>正在解析中，请稍候...</p>';
+        resultArea.innerHTML = ''; // Clear previous results
+        loader.style.display = 'flex'; // Show loader
 
         try {
             const response = await fetch(`/api/hello?data&url=${encodeURIComponent(url)}`);
@@ -21,32 +32,55 @@ document.addEventListener('DOMContentLoaded', () => {
             renderResult(data);
         } catch (error) {
             console.error('解析失败:', error);
-            resultArea.innerHTML = `<p style="color: red;">解析失败，请检查链接或稍后再试。</p>`;
+            showAlert('解析失败，请检查链接或稍后再试。', 'danger');
+        } finally {
+            loader.style.display = 'none'; // Hide loader
+        }
+    };
+
+    parseBtn.addEventListener('click', handleParse);
+
+    urlInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleParse();
         }
     });
 
     function renderResult(data) {
         if (!data) {
-            resultArea.innerHTML = `<p style="color: red;">未能获取到有效数据。</p>`;
+            showAlert('未能获取到有效数据。', 'danger');
             return;
         }
 
         let mediaHtml = '';
         if (data.type === 'video' && data.video_url) {
+            const title = data.desc || "douyin_video";
+            const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
+            const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
             mediaHtml = `
                 <div class="media-container">
-                    <video controls src="${data.video_url}" preload="metadata"></video>
-                    <a href="${data.video_url}" download class="download-link">下载视频</a>
+                    <video controls src="${videoProxyUrl}" preload="metadata"></video>
+                    <a href="${downloadUrl}" class="download-link" download="${title}.mp4">下载视频</a>
                 </div>
             `;
         } else if (data.type === 'img' && data.image_url_list && data.image_url_list.length > 0) {
+            const title = data.desc || "douyin_image";
             mediaHtml = `
                 <div class="media-container">
                     <h3>图集预览</h3>
                     <div class="image-gallery">
-                        ${data.image_url_list.map(imgUrl => `<a href="${imgUrl}" target="_blank"><img src="${imgUrl}" alt="抖音图片"></a>`).join('')}
+                        ${data.image_url_list.map(imgUrl => {
+                            const imgProxyUrl = `/api/download?url=${encodeURIComponent(imgUrl)}&disp=inline`;
+                            return `<a href="${imgProxyUrl}" target="_blank"><img src="${imgProxyUrl}" alt="抖音图片"></a>`;
+                        }).join('')}
                     </div>
-                     ${data.image_url_list.map((imgUrl, index) => `<a href="${imgUrl}" download="image_${index + 1}.jpeg" class="download-link">下载图片 ${index + 1}</a>`).join(' ')}
+                    <div class="download-links-container">
+                     ${data.image_url_list.map((imgUrl, index) => {
+                        const downloadUrl = `/api/download?url=${encodeURIComponent(imgUrl)}&title=${encodeURIComponent(title)}_${index + 1}&ext=jpeg&disp=attachment`;
+                        return `<a href="${downloadUrl}" download="${title}_${index + 1}.jpeg" class="download-link">下载图片 ${index + 1}</a>`;
+                     }).join('')}
+                    </div>
                 </div>
             `;
         }
@@ -63,5 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         resultArea.innerHTML = infoHtml + mediaHtml;
+    }
+
+    function showAlert(message, type = 'danger') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        resultArea.innerHTML = ''; // Clear any previous content
+        resultArea.appendChild(alertDiv);
     }
 });
