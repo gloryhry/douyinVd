@@ -8,6 +8,8 @@ services:
         all_proxy: http://192.168.3.30:7890
       network: host
     image: my-deno-app
-    command: deno run --allow-net --allow-read main.ts
+    command: deno run --allow-net --allow-read --allow-env=TRAFFIC_LIMIT main.ts
     ports:
       - "8000:8000"
+    environment:
+      - TRAFFIC_LIMIT
