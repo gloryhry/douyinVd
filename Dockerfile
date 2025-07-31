@@ -28,8 +28,10 @@ COPY public/ /app/public/
 COPY *.ts ./
 COPY api/ /app/api/
 
+ENV TRAFFIC_LIMIT=yes
+
 EXPOSE 8000
 
 # Run the app using the cached dependencies and lock file
-CMD ["run", "--allow-net", "--allow-read", "--lock=deno.lock", "main.ts"]
+CMD ["run", "--allow-net", "--allow-read", "--allow-env=TRAFFIC_LIMIT", "--lock=deno.lock", "main.ts"]
 

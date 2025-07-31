@@ -8,10 +8,14 @@ export const config = {
 
 // 您的 handler 函数
 const handler = async (req: Request) => {
+    const isTrafficLimited = (Deno.env.get("TRAFFIC_LIMIT") ?? "yes").toLowerCase() === "yes";
     const url = new URL(req.url);
     const pathname = url.pathname;
 
     if (pathname === "/api/download") {
+        if (isTrafficLimited) {
+            return new Response("因流量限制，该下载功能已禁用。", { status: 403 });
+        }
         try {
             const fileUrl = url.searchParams.get("url");
             if (!fileUrl) {
@@ -77,7 +81,18 @@ const handler = async (req: Request) => {
             console.log("inputUrl:", inputUrl);
             if (url.searchParams.has("data")) {
                 const videoInfo = await getVideoInfo(inputUrl);
-                return new Response(JSON.stringify(videoInfo), {
+                
+                // 根据环境变量判断是否要限制流量
+                const finalVideoInfo: any = { ...videoInfo, isTrafficLimited };
+
+                if (isTrafficLimited) {
+                    // 当流量受限时，不返回视频的具体链接，但保留图片链接
+                    // 保留 desc 和 author 等元数据
+                    // delete finalVideoInfo.video;
+                    // delete finalVideoInfo.img;
+                }
+
+                return new Response(JSON.stringify(finalVideoInfo), {
                     headers: { "Content-Type": "application/json" },
                 });
             }

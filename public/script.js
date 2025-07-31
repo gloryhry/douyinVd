@@ -61,12 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const isLimited = data.isTrafficLimited;
         let mediaHtml = '';
+
         if (data.type === 'video' && data.video_url) {
             const title = sanitizeFilename(data.desc || "douyin_video");
-            const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
-            const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
             const videoUrl = data.video_url;
+            
+            // This part is for displaying the original link, which should always be shown.
             const urlContainerHtml = `
                 <div class="media-container">
                     <h3>视频链接<span id="copy-status"></span></h3>
@@ -76,15 +78,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
-            mediaHtml = urlContainerHtml + `
+            
+            mediaHtml = urlContainerHtml; // Always show the URL container.
+
+            // Only show video player and download link if traffic is NOT limited.
+            if (!isLimited) {
+                const videoProxyUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=inline`;
+                const downloadUrl = `/api/download?url=${encodeURIComponent(data.video_url)}&title=${encodeURIComponent(title)}&ext=mp4&disp=attachment`;
+                mediaHtml += `
                 <div class="media-container">
                     <video controls src="${videoProxyUrl}" preload="metadata"></video>
                     <a href="${downloadUrl}" class="download-link" download="${title}.mp4">下载视频</a>
                 </div>
             `;
+            }
         } else if (data.type === 'img' && data.image_url_list && data.image_url_list.length > 0) {
             const title = sanitizeFilename(data.desc || "douyin_image");
-            mediaHtml = `
+            // 当流量受限时，仅显示图片链接列表
+            if (isLimited) {
+                mediaHtml = `
+                <div class="media-container">
+                    <h3>图片链接<span id="copy-status"></span></h3>
+                    <div class="url-list-container">
+                        ${data.image_url_list.map((imgUrl, index) => `
+                            <div class="url-display">
+                                <input type="text" id="image-url-text-${index}" value="${imgUrl}" readonly class="url-input">
+                                <button class="copy-button" data-url="${imgUrl}" data-index="${index}">复制</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                `;
+            } else {
+                // 非受限情况下，显示图集预览和下载链接
+                mediaHtml = `
                 <div class="media-container">
                     <h3>图集预览</h3>
                     <div class="image-gallery">
@@ -101,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             `;
+            }
         }
 
         const infoHtml = `
@@ -116,30 +144,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultArea.innerHTML = infoHtml + mediaHtml;
 
+        // The copy function should work even when limited.
         if (data.type === 'video' && data.video_url) {
             const copyBtn = document.getElementById('copy-url-btn');
-            const videoUrl = data.video_url;
-
             if (copyBtn) {
-                copyBtn.addEventListener('click', () => copyToClipboard(videoUrl, false));
+                copyBtn.addEventListener('click', (e) => copyToClipboard(e.target, data.video_url, false));
             }
-            copyToClipboard(videoUrl, true);
+            copyToClipboard(copyBtn, data.video_url, true);
+        } else if (data.type === 'img' && data.image_url_list && data.image_url_list.length > 0 && isLimited) {
+            const copyBtns = document.querySelectorAll('.copy-button');
+            copyBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const url = e.target.getAttribute('data-url');
+                    copyToClipboard(e.target, url, false);
+                });
+            });
+            // Auto-copy the first image URL
+            if (copyBtns.length > 0) {
+                const firstUrl = copyBtns[0].getAttribute('data-url');
+                copyToClipboard(copyBtns[0], firstUrl, true);
+            }
         }
     }
 
-    function copyToClipboard(text, isAuto = false) {
+    function copyToClipboard(buttonElement, text, isAuto = false) {
         const copyStatus = document.getElementById('copy-status');
-        const copyBtn = document.getElementById('copy-url-btn');
-
+        
         navigator.clipboard.writeText(text).then(() => {
             if (copyStatus) {
-                copyStatus.textContent = isAuto ? ' (已自动复制)' : ' (已复制)';
+                copyStatus.textContent = isAuto ? ' (首个链接已自动复制)' : ' (已复制)';
                 copyStatus.style.color = 'green';
             }
-            if (copyBtn) {
-                copyBtn.textContent = '已复制!';
+            if (buttonElement) {
+                const originalText = buttonElement.textContent;
+                buttonElement.textContent = '已复制!';
                 setTimeout(() => {
-                    copyBtn.textContent = '复制';
+                    buttonElement.textContent = originalText;
                 }, 2000);
             }
         }).catch(err => {
