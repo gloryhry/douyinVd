@@ -2,9 +2,18 @@
 
 ## 📌 功能说明
 
-通过提供的抖音视频或者图文链接，获取对应的无水印视频(图片)链接。
+- **前端页面**：提供简洁的Web界面，用户可以直接粘贴抖音分享链接进行解析。
+- **多种返回格式**：支持直接重定向到无水印资源链接，或返回包含详细信息的JSON数据。
+- **图文/视频支持**：能自动识别并处理视频和图文两种类型的分享链接。
+- **链接复制**：解析成功后，可以一键复制无水印资源链接。
+- **在线预览与下载**：
+    - 支持在线播放无水印视频和预览无水印图片。
+    - 提供直接的下载按钮，方便保存媒体文件。
+- **流量限制模式**：
+    - 可通过环境变量 `TRAFFIC_LIMIT` 开启（默认开启）。
+    - 开启后，将不提供在线预览和代理下载功能，只显示资源链接，以节约服务器流量。
 
-### 🔧 请求方式
+### 🔧 API 请求方式
 - **方法**：GET
 - **地址**：`https://yourdomain?url=https://v.douyin.com/xxxx/`
 - **参数说明**：
@@ -72,8 +81,10 @@ image_url_list: string[] | null;
 
 ### 3. vercel 部署
 - fork 本项目后，进入vercel dashboard导入项目
+- 在环境变量中，可以添加 `TRAFFIC_LIMIT` 变量，设置为 `no` 可关闭流量限制模式（默认开启）。
 - 直接点击deploy即可部署
-- 访问链接为 https://yourdomain.vercel.app/api/hello?url=https://v.douyin.com/xxxx/
+- 部署后直接访问 https://yourdomain.vercel.app/ 即可使用前端页面。
+- API 访问链接为 https://yourdomain.vercel.app/api/hello?url=https://v.douyin.com/xxxx/
 
 ### 4. docker 部署
 - clone 本项目到服务器
